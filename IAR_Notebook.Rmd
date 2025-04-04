@@ -1,0 +1,214 @@
+---
+title: "IAR_data"
+author: "James Rios"
+date: "2025-04-04"
+output: html_document
+---
+
+
+
+```{r}
+# Load libraries
+library(text2vec)
+library(stringdist)
+library(digest)
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(tidyr)
+library(stringr)
+library(plotly)
+```
+
+```{r}
+#load data
+data <- read.csv("df_final.csv")
+
+```
+
+## Part 1 (standardize employment organization names and clean data)
+
+```{r}
+# Workflow
+
+companies <- unique(data$org_name)
+
+# STEP 1: Clean Company Names
+clean_company_names <- function(companies) {
+  companies_cleaned <- tolower(companies)
+  companies_cleaned <- gsub("[[:punct:]]", "", companies_cleaned)
+  companies_cleaned <- gsub("\\(.*?\\)", "", companies_cleaned)
+  
+  filler_words <- c(
+    "inc", "llc", "corp", "solutions", "advisors", "financial", 
+    "company", "international", "group", "co", "capital", 
+    "services", "management", "partners", "software", "tech"
+  )
+  
+  companies_cleaned <- sapply(companies_cleaned, function(name) {
+    words <- strsplit(name, "\\s+")[[1]]
+    words <- words[!words %in% filler_words]
+    paste(words, collapse = " ")
+  })
+  
+  return(companies_cleaned)
+}
+
+# STEP 2: Tokenize
+word_tokenizer <- function(strings) {
+  lapply(strings, function(s) strsplit(s, "\\s+")[[1]])
+}
+
+cleaned_names <- clean_company_names(companies)
+tokens <- word_tokenizer(cleaned_names)
+
+# STEP 3: Group companies based on core brand
+groups <- list()
+visited <- rep(FALSE, length(companies))
+
+for (i in seq_along(companies)) {
+  if (!visited[i]) {
+    group <- c(i)
+    visited[i] <- TRUE
+    
+    if (length(tokens[[i]]) > 0) {
+      core_name <- tokens[[i]][1]
+      if (i + 1 <= length(companies)) {
+        for (j in seq(i + 1, length(companies))) {
+          if (!visited[j] && length(tokens[[j]]) > 0 && tokens[[j]][1] == core_name) {
+            group <- c(group, j)
+            visited[j] <- TRUE
+          }
+        }
+      }
+    }
+    
+    groups <- append(groups, list(group))
+  }
+}
+
+# STEP 4: Generate group labels and build lookup
+group_labels <- c()
+group_lookup <- data.frame(company = companies, cleaned = cleaned_names, group_label = NA, stringsAsFactors = FALSE)
+
+for (group_idx in seq_along(groups)) {
+  group <- groups[[group_idx]]
+  group_tokens <- unlist(tokens[group])
+  word_freq <- sort(table(group_tokens), decreasing = TRUE)
+  label <- paste(names(head(word_freq, 2)), collapse = " ")
+  
+  group_labels[group_idx] <- label
+  group_lookup$group_label[group] <- label
+}
+
+# STEP 5: Assign group labels
+data$cleaned_name <- clean_company_names(data$org_name)
+data$group_label <- group_lookup$group_label[match(data$cleaned_name, group_lookup$cleaned)]
+
+```
+
+```{r}
+#Step 6: Final Standardization
+data <- data %>%
+  mutate(standardized_name = case_when(
+    grepl("lynch", group_label, ignore.case = TRUE) ~ "Merrill Lynch",
+    grepl("morgan stanley", group_label, ignore.case = TRUE) ~ "Morgan Stanley",
+    grepl("citigroup", group_label, ignore.case = TRUE) ~ "Citigroup",
+    grepl("wells fargo", group_label, ignore.case = TRUE) ~ "Wells Fargo",
+    grepl("edward", group_label, ignore.case = TRUE) ~ "Edward Jones",
+    grepl("ameriprise", group_label, ignore.case = TRUE) ~ "Ameriprise",
+    grepl("strategic wealth", group_label, ignore.case = TRUE) ~ "Strategic Wealth",
+    grepl("ubs", group_label, ignore.case = TRUE) ~ "UBS",
+    grepl("lpl", group_label, ignore.case = TRUE) ~ "LPL Financial",
+    grepl("equitable", group_label, ignore.case = TRUE) ~ "Equitable",
+    grepl("osaic", group_label, ignore.case = TRUE) ~ "Osaic",
+    grepl("a better", group_label, ignore.case = TRUE) ~ "A Better Financial",
+    grepl("charles", group_label, ignore.case = TRUE) ~ "Charles Schwab",
+    grepl("pruco", group_label, ignore.case = TRUE) ~ "Pruco Securities",
+    grepl("cetera", group_label, ignore.case = TRUE) ~ "Cetera",
+    grepl("banc america", group_label, ignore.case = TRUE) ~ "Bank of America",
+    grepl("jp morgan", group_label, ignore.case = TRUE) ~ "JPMorgan",
+    grepl("chase", group_label, ignore.case = TRUE) ~ "JPMorgan Chase",
+    grepl("raymond james", group_label, ignore.case = TRUE) ~ "Raymond James",
+    grepl("mml", group_label, ignore.case = TRUE) ~ "MML Investors",
+    grepl("waddell", group_label, ignore.case = TRUE) ~ "Waddell & Reed",
+    grepl("^msi$", group_label, ignore.case = TRUE) ~ "MSI Financial",
+    grepl("fidelity", group_label, ignore.case = TRUE) ~ "Fidelity",
+    grepl("securities america", group_label, ignore.case = TRUE) ~ "Securities America",
+    grepl("cambridge", group_label, ignore.case = TRUE) ~ "Cambridge Investment",
+    grepl("prudential", group_label, ignore.case = TRUE) ~ "Prudential",
+    grepl("td ameritrade", group_label, ignore.case = TRUE) ~ "TD Ameritrade",
+    grepl("rbc", group_label, ignore.case = TRUE) ~ "RBC",
+    grepl("credit suisse", group_label, ignore.case = TRUE) ~ "Credit Suisse",
+    grepl("vanguard", group_label, ignore.case = TRUE) ~ "Vanguard",
+    grepl("principal", group_label, ignore.case = TRUE) ~ "Principal",
+    grepl("fifth third", group_label, ignore.case = TRUE) ~ "Fifth Third",
+    grepl("kestra", group_label, ignore.case = TRUE) ~ "Kestra",
+    grepl("truist", group_label, ignore.case = TRUE) ~ "Truist",
+    grepl("transamerica", group_label, ignore.case = TRUE) ~ "Transamerica",
+    grepl("b riley", group_label, ignore.case = TRUE) ~ "B. Riley",
+    grepl("us bancorp", group_label, ignore.case = TRUE) ~ "US Bancorp",
+    grepl("usaa", group_label, ignore.case = TRUE) ~ "USAA",
+    grepl("stifel", group_label, ignore.case = TRUE) ~ "Stifel",
+    grepl("hsbc", group_label, ignore.case = TRUE) ~ "HSBC",
+    grepl("ameritas", group_label, ignore.case = TRUE) ~ "Ameritas",
+    grepl("fisher", group_label, ignore.case = TRUE) ~ "Fisher Investments",
+    grepl("alliancebernstein", group_label, ignore.case = TRUE) ~ "AllianceBernstein",
+    grepl("state farm", group_label, ignore.case = TRUE) ~ "State Farm",
+    grepl("janney", group_label, ignore.case = TRUE) ~ "Janney",
+    grepl("barclays", group_label, ignore.case = TRUE) ~ "Barclays",
+    grepl("oppenheimer", group_label, ignore.case = TRUE) ~ "Oppenheimer",
+    grepl("tiaacref", group_label, ignore.case = TRUE) ~ "TIAA",
+    grepl("blackrock", group_label, ignore.case = TRUE) ~ "BlackRock",
+    grepl("bmo", group_label, ignore.case = TRUE) ~ "BMO",
+    grepl("t price", group_label, ignore.case = TRUE) ~ "T. Rowe Price",
+    TRUE ~ group_label  # fallback to original name
+  ))
+```
+
+```{r}
+#Step 8: Clean data
+# Drop columns
+data <- data %>%
+  select(-most_common_org_name, -cleaned_name, -group_label, -reg_location_count)
+
+# Rename 
+data <- data %>%
+  rename(employment_city_state = most_common_city_state) 
+
+# Update ave_registration_duration
+data <- data %>%
+  mutate(
+    ave_registration_duration = if_else(
+      registration_count == 1 & ave_registration_duration == 0, 
+      ave_org_duration, 
+      ave_registration_duration
+    )
+  )
+
+# Convert 'ave_registration_duration' from months to years
+data <- data %>%
+  mutate(ave_registration_duration_years = ave_registration_duration / 12)
+
+# Extract States
+data <- data %>%
+  mutate(employment_state = str_trim(str_extract(employment_city_state, "[^,]+$")))
+
+# Create a mapping data frame
+state_region_df <- data.frame(
+  employment_state = state.abb,
+  employment_region = state.region,
+  stringsAsFactors = FALSE
+)
+
+# Join with your original data
+data <- data %>%
+  left_join(state_region_df, by = "employment_state")
+
+
+```
+
+
+
+
+
