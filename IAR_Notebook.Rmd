@@ -18,6 +18,7 @@ library(cowplot)
 library(tidyr)
 library(stringr)
 library(plotly)
+library(RColorBrewer)
 ```
 
 ```{r}
@@ -205,8 +206,156 @@ state_region_df <- data.frame(
 data <- data %>%
   left_join(state_region_df, by = "employment_state")
 
+```
+
+## Part 2 (Data exploration)
+
+```{r}
+# Calculate the top 10 most frequent organizations
+top_10_orgs <- data %>%
+  count(standardized_name) %>%
+  arrange(desc(n)) %>%
+  top_n(10, n)
+
+ggplot(top_10_orgs, aes(x = reorder(standardized_name, n), y = n)) +
+  geom_col(fill = 'lightblue', color = "black") +
+  labs(
+    title = "Top 10 Most Common Organizations",
+    y = "Frequency",
+    x = NULL 
+  ) +
+  theme_classic() +
+  theme(axis.text.x = element_text(hjust = 1)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0, 1), limits = c(0, NA))  
 
 ```
+```{r}
+# Custom theme to remove y-axis elements for boxplot
+mytheme <- theme(
+  axis.line.y = element_blank(),
+  axis.text.y = element_blank(),
+  axis.ticks.y = element_blank(),
+  axis.title.y = element_blank()
+)
+
+# Create histogram plot for 'ave_registration_duration' in years
+hist_plot <- ggplot(data, aes(x = ave_registration_duration_years)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "lightblue", alpha = 0.7) +
+  labs(title = "Histogram of Average Registration Duration (Years)", 
+       x = "Average Registration Duration (Years)", y = NULL) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    plot.margin = margin(10, 10, 10, 10)  # Adjust margin for tighter fit
+  ) +
+   scale_x_continuous(
+    breaks = seq(0, max(data$ave_registration_duration_years, na.rm = TRUE), by = 5)
+  ) +
+  scale_y_continuous(expand = c(0, 0))     # Remove y-axis gaps
+
+# Create boxplot with space at the bottom for 'ave_registration_duration' in years
+box_plot <- ggplot(data, aes(y = ave_registration_duration_years)) +
+  geom_boxplot(fill = "lightblue", outlier.shape = 21, outlier.fill = "lightblue", outlier.alpha = 0.5) +
+  coord_flip() +  # Flip coordinates to make the boxplot horizontal
+  theme_classic() + mytheme +  # Apply custom theme
+  theme(
+    axis.line.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+# Arrange the plots using cowplot
+plot_grid(hist_plot, box_plot, ncol = 1, rel_heights = c(0.9, 0.15), align = 'v', axis = 'lr')
+```
+```{r}
+# Group by state and find the top 3 most common standardized names
+top_3_by_region <- data %>%
+  filter(!is.na(employment_region) & !is.na(standardized_name)) %>%  
+  group_by(employment_region, standardized_name) %>%
+  count(name = "name_count") %>%  
+  arrange(desc(name_count), employment_region)
+  group_by(employment_region) %>%  
+  slice_head(n = 3)  
+
+
+ggplot(top_3_by_region, aes(x = standardized_name, y = name_count, fill = standardized_name)) +
+  geom_bar(stat = "identity", position="dodge", color="black") +
+  facet_grid(~ employment_region) +  
+  labs(
+    title = "Top 3 Most Common Organizations by Employment Region",
+    y = NULL,
+    fill = "Organization"  
+  ) +
+  scale_fill_brewer(palette = "Set1") +  
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+
+
+```
+```{r}
+suppressMessages({
+top_10_orgs_by_reg <- data %>%
+  filter(!is.na(employment_region) & !is.na(standardized_name)) %>%
+  group_by(standardized_name) %>%
+  summarise(total_registration_count = sum(registration_count, na.rm = TRUE)) %>%  # Sum the registration_count
+  arrange(desc(total_registration_count)) %>%  # Sort by total_registration_count in descending order
+  slice_head(n = 10)  # Keep the top 10 organizations
+})
+
+ggplot(top_10_orgs_by_reg, aes(x = standardized_name, y = total_registration_count)) +
+  geom_bar(stat = "identity", position = "stack", color = "black", fill = "lightblue") +
+  labs(
+    title = "Top 10 Org by Registration",
+    x = NULL,
+    y = "registrations"
+  ) +
+  theme_classic() +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_flip()  # Flip coordinates for better readability of labels
+
+suppressMessages({
+#add third variable
+top_3_orgs_by_reg_region <- data %>%
+  filter(!is.na(employment_region) & !is.na(standardized_name)) %>%
+  group_by(employment_region,standardized_name) %>%
+  summarise(total_registration_count = sum(registration_count, na.rm = TRUE)) %>%  
+  arrange(desc(total_registration_count)) %>% 
+  slice_head(n = 3)  
+
+})
+# Visualize the top 3 organizations by employment region and another variable
+ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registration_count, fill = standardized_name)) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +  
+  facet_grid(~ employment_region) +  
+  labs(
+    title = "Top 3 Orgs by Registrations across Employment Regions",
+    fill = "Organization" ,
+    y = NULL
+  ) +
+  scale_fill_brewer(palette = "Set1") +  
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),  # Remove x-axis labels
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.title.x = element_blank()  # Remove x-axis title
+  )
+
+
+
+
+```
+
 
 
 
