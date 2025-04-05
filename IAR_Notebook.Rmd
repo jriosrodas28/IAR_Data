@@ -168,6 +168,7 @@ data <- data %>%
 ```
 
 ```{r}
+
 #Step 8: Clean data
 # Drop columns
 data <- data %>%
@@ -277,9 +278,10 @@ top_3_by_region <- data %>%
   filter(!is.na(employment_region) & !is.na(standardized_name)) %>%  
   group_by(employment_region, standardized_name) %>%
   count(name = "name_count") %>%  
-  arrange(desc(name_count), employment_region)
+  arrange(desc(name_count)) %>%
+  ungroup() %>%  # 💡 Reset group before re-grouping
   group_by(employment_region) %>%  
-  slice_head(n = 3)  
+  slice_head(n = 3)
 
 
 ggplot(top_3_by_region, aes(x = standardized_name, y = name_count, fill = standardized_name)) +
@@ -309,7 +311,7 @@ top_10_orgs_by_reg <- data %>%
   group_by(standardized_name) %>%
   summarise(total_registration_count = sum(registration_count, na.rm = TRUE)) %>%  # Sum the registration_count
   arrange(desc(total_registration_count)) %>%  # Sort by total_registration_count in descending order
-  slice_head(n = 10)  # Keep the top 10 organizations
+  slice_head(n = 10)  
 })
 
 ggplot(top_10_orgs_by_reg, aes(x = standardized_name, y = total_registration_count)) +
@@ -333,6 +335,7 @@ top_3_orgs_by_reg_region <- data %>%
   slice_head(n = 3)  
 
 })
+
 # Visualize the top 3 organizations by employment region and another variable
 ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registration_count, fill = standardized_name)) +
   geom_bar(stat = "identity", position = "dodge", color = "black") +  
@@ -353,6 +356,137 @@ ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registrati
 
 
 
+
+```
+```{r}
+
+# Create a scatter plot to visualize registration_count vs ave_registration_duration
+ggplot(data, aes(y = registration_count, x = ave_registration_duration)) +
+  geom_jitter(color = "lightblue", alpha = 0.5) +  
+  labs(
+    title = "Registration Count vs Average Registration Duration",
+    y = "Registration Count",
+    x = "Average Registration Duration (Months)"
+  ) +
+  theme_classic() +  
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    plot.title = element_text(hjust = 0.5),  
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  ) 
+
+
+```
+# Plotly 
+```{r}
+# 1. Get top 5 firms by unique individual_id
+top_10_firms <- data %>%
+  filter(!is.na(standardized_name), standardized_name != "") %>%
+  group_by(standardized_name) %>%
+  summarise(total_individuals = n_distinct(individual_id)) %>%
+  arrange(desc(total_individuals)) %>%
+  slice_head(n = 5) %>%
+  pull(standardized_name)
+
+# 2. Aggregate data by state and firm
+top_firm_state_data <- data %>%
+  filter(standardized_name %in% top_10_firms) %>%
+  group_by(standardized_name, employment_state) %>%
+  summarise(
+    individual_count = n_distinct(individual_id),
+    total_registration_count = sum(registration_count),
+    ave_registration_duration = round(mean(ave_registration_duration)),
+    total_reg_city_count = sum(reg_city_count),
+    .groups = "drop"
+  )
+
+# 2. Aggregate data by region and firm
+top_firm_region_data <- data %>%
+  filter(standardized_name %in% top_10_firms) %>%
+  group_by(standardized_name, employment_region) %>%
+  summarise(
+    individual_count = n_distinct(individual_id),
+    total_registration_count = sum(registration_count),
+    ave_registration_duration = round(mean(ave_registration_duration)),
+    total_reg_city_count = sum(reg_city_count),
+    .groups = "drop"
+  )
+```
+
+```{r}
+
+
+set.seed(42)  # For reproducibility of jitter
+
+# 3. Get state centroids
+state_coords <- data.frame(
+  employment_state = state.abb,
+  lat = state.center$y,
+  lon = state.center$x,
+  stringsAsFactors = FALSE
+)
+
+# 4. Merge and add jitter
+top_firm_state_data <- top_firm_state_data %>%
+  left_join(state_coords, by = "employment_state") %>%
+  mutate(
+    lat_jitter = lat + runif(n(), -0.6, 0.6),
+    lon_jitter = lon + runif(n(), -0.6, 0.6)
+  )
+
+top_firm_state_data <- top_firm_state_data %>%
+  mutate(
+    lat_jitter = case_when(
+      employment_state == "HI" ~ 20.5,
+      employment_state == "AK" ~ 63,
+      TRUE ~ lat_jitter
+    ),
+    lon_jitter = case_when(
+      employment_state == "HI" ~ -157.5,
+      employment_state == "AK" ~ -150,
+      TRUE ~ lon_jitter
+    )
+  )
+
+
+# 5. Plot
+color_palette <- brewer.pal(5, "Set1")
+
+plot_ly(
+  data = top_firm_state_data,
+  type = "scattergeo",
+  mode = "markers",
+  lat = ~lat_jitter,
+  lon = ~lon_jitter,
+  locationmode = "USA-states",
+  color = ~standardized_name,
+  colors = color_palette,
+  text = ~paste0(
+    "Firm: ", standardized_name, "<br>",
+    "State: ", employment_state, "<br>",
+    "Individuals: ", individual_count, "<br>",
+    "Registrations: ", total_registration_count, "<br>",
+    "Registration average duration in months: ", ave_registration_duration, "<br>",
+    "Registered in num Cities: ", total_reg_city_count
+  ),
+  marker = list(
+    size = ~sqrt(individual_count),
+    sizemode = "area",
+    line = list(width = 0.5, color = "black"),
+    opacity = 0.7
+  ),
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Top 5 Firms by IAR Employment",
+    geo = list(
+      scope = "usa",
+      showland = TRUE,
+      landcolor = "rgb(240, 240, 240)",
+      subunitcolor = "white"
+    )
+  )
 
 ```
 
