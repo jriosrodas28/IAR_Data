@@ -1,41 +1,132 @@
-For this project, I want you to visualize data from a dataset of your choice. The dataset has to be rich
-enough so that you can create the following charts:
-• A chart that shows the distribution of a single categorical variable
-• A chart that shows the distribution of a single quantitative variable
-• A chart that shows the distribution of two categorical variables
-• A chart that shows the distribution of a quantitative variable across categories of a
-categorical variable
-• A chart that shows the relationship between two quantitative variables
-For some of the charts above, you should also show what happens when you take a third or fourth
-variable (categorical or quantitative) into account, by using tools such as faceting or other coloring
-dots in a scatterplot.
-Finally, please also construct at least one chart type that we have not directly discussed in class and
-on handouts, such as:
-• Radar or spider (-web) charts for showing summary statistics (such as means) across several
-categories of a categorical variable. Side-by-side versions of these (so, adjusted for a third
-categorical variable) are especially effective.
-• Heatmaps. For example, you learned about the correlation matrix in Machine Learning.
-Obtain the correlation matrix of four or five quantitative variables (or “features”), and
-visualize it using a heatmap.
-• Contour Plots, for showing the joint distribution (density) of two quantitative variables.
-Contour plots are the extension of density plots for one continuous variable. For instance,
-you can visualize the joint distribution of two quantitative variables from your dataset with
-contour plots.
-• Sunburst charts to show the distribution of two or more categorical variables. (This is
-harder, and the best implementation I know is in plotly.)
-This is not an exhaustive list and you can explore other chart types on your own! My point is that
-you learn how to research a particular graph type and then apply it to your data.
-Finally, don’t forget that the reason for creating graphs is to convey information, and so for every
-chart you are making, please provide a short paragraph below it that explains what the graph is
-telling us about your data.
-What to turn in:
-• Do not work on this on the last minute. Beginning mid next week, I’ll monitor your GitHub
-repositories for gradual progress!
-• Turn in a document that shows key graphs and aspects of your data exploration. Don’t put
-every graph you created in this document. It needs to be polished and it needs to read like a
-high-level report. Also, I’m restricting the length to no more than 4 pages.
-• Prepare a four-minute class presentation on your analysis and findings and upload the slides
-for your presentation.
-• Also upload a two-minute video (for instance, recorded using Skype where you can screen-
-share) that presents your data and your key findings together with the graph that visually
-explore them. Make sure the video plays in Canvas!
+# Investment Adviser Public Disclosure (IAPD) Data Visualization
+
+## Overview
+
+This project involves visualizing data from the Investment Adviser Public Disclosure (IAPD) system, which provides public access to information about registered investment advisers (IAs) and their representatives (IARs). The dataset used contains detailed records on IARs, including personal information, employment history, licensing details, and customer complaints.
+
+The goal of this project is to explore and visualize various patterns and trends within the data by creating a series of informative charts. The dataset allows us to create a variety of charts, such as:
+
+- **Distribution of a single categorical variable**
+- **Distribution of a single quantitative variable**
+- **Distribution of two categorical variables**
+- **Distribution of a quantitative variable across categories of a categorical variable**
+- **Relationship between two quantitative variables**
+
+Additionally, the project explores more complex visualizations like interactive geographic maps.
+
+---
+
+# IAPD Overview
+
+The Investment Adviser Public Disclosure (IAPD) system is a platform managed by the U.S. Securities and Exchange Commission (SEC) and the North American Securities Administrators Association (NASAA). Its primary goal is to enhance transparency by providing public access to information about registered investment advisers and their representatives.
+
+### Representative Compilation Reports
+
+The system generates detailed reports for each individual IAR, which include the following categories:
+
+#### Personal & Registration Information
+- Representative's full legal name
+- Registration status, jurisdictions, and employer details
+- Unique Central Registration Depository (CRD) number
+
+#### Qualifications & Education
+- Licenses and certifications 
+- Educational background and years of industry experience
+
+#### Disciplinary History
+- Details on criminal or regulatory actions, civil lawsuits, bankruptcies, and outcomes
+
+#### Employment History
+- Previous employers, job titles, and responsibilities
+
+#### Other Affiliations
+- Other business activities, affiliations, and potential conflicts of interest
+
+#### Customer Complaints
+- Client complaints, arbitration results, and regulatory investigations
+
+#### Additional Disclosures
+- Relevant financial disclosures and other business relationships
+
+---
+
+# Data Preparation: First Stage Summary
+
+The dataset comprises 20 XML files from the SEC’s IAPD system. I used Python to parse and extract key categories of information, such as:
+
+- Personal details
+- Employment history
+- Registration history
+- Licensing exams and certifications
+- Disclosures and other business activities
+
+This data was then organized into **pandas DataFrames**, with each DataFrame representing a specific aspect of an IAR’s professional profile.
+
+---
+
+# Data Preparation: Second Stage Summary
+
+In the second stage, I employed an R script to clean and standardize employer names in the dataset. Key steps included:
+
+1. **Standardizing company names**:
+   - Converted names to lowercase
+   - Removed punctuation and filler words (e.g., "LLC," "Inc," "Group")
+
+2. **Tokenizing company names**:
+   - Split company names into individual words and grouped similar names
+
+3. **Mapping company names**:
+   - Used a lookup table to assign standardized labels to similar company names
+
+4. **Manual standardization**:
+   - Applied case-specific rules (e.g., mapping "morgan stanley" to "Morgan Stanley")
+
+5. **Hashing the CRD number**:
+   - The unique CRD number for each representative was **hashed** to obfuscate sensitive data while maintaining the ability to link records in a non-identifiable manner.
+
+Additionally, I added key fields such as:
+- Average registration duration
+- Average Employment duration
+- Employment state and U.S. region
+
+---
+
+# Data Exploration: Summary
+
+The dataset was explored through both static and interactive visualizations, focusing on trends and patterns within the data. Key analyses included:
+
+### 1. **Top 10 Most Common Firms**
+   A bar chart displaying the top 10 most common firms.
+
+### 2. **Average Registration Duration**
+   A histogram and boxplot showing how long IARs typically remain registered with each registration.
+
+### 3. **Regional Patterns**
+   Regional trends were analyzed by visualizing the top 3 firms by employment region and registration volume across U.S. states.
+
+### 4. **Firm Comparison**
+   A scatter plot showing the relationship between registration count and average registration duration across firms.
+
+### 5. **Interactive Map**
+   Using Plotly, an interactive map was created to visualize firm-level metrics such as total representatives, registrations, and city reach across U.S. states. Users can zoom in to explore specific regions.
+
+---
+
+# What to Expect
+
+The project includes several visualizations that analyze and highlight key insights from the IAPD dataset. Each visualization is followed by a short explanation of the trends or patterns it reveals.
+
+The main visualizations include:
+
+- Static charts: Bar charts, histograms, boxplots, and scatter plots
+- Interactive charts: Plotly-powered geographic maps
+
+---
+
+# Note
+
+This README was created with the assistance of a **language model** (LM) to help ensure clarity and readability.
+
+---
+
+
