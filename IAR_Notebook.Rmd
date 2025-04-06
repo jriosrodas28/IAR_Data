@@ -19,6 +19,8 @@ library(tidyr)
 library(stringr)
 library(plotly)
 library(RColorBrewer)
+library(tidytext)
+library(forcats)
 ```
 
 ```{r}
@@ -284,10 +286,15 @@ top_3_by_region <- data %>%
   group_by(employment_region) %>%  
   slice_head(n = 3)
 
+# Reorder factor levels by frequency for legend + bar alignment
+top_3_by_region <- top_3_by_region %>%
+  group_by(employment_region) %>%
+  mutate(standardized_name = fct_reorder2(standardized_name, name_count, employment_region, .fun = max, .desc = TRUE)) %>%
+  ungroup()
 
-top_3_by_region_plot <- ggplot(top_3_by_region, aes(x = standardized_name, y = name_count, fill = standardized_name)) +
+top_3_by_region_plot <- ggplot(top_3_by_region, aes(x = reorder_within(standardized_name, name_count, employment_region),  y = name_count, fill = standardized_name)) +
   geom_bar(stat = "identity", position="dodge", color="black") +
-  facet_grid(~ employment_region) +  
+  facet_grid(~ employment_region, scales = "free_x") +  
   labs(
     title = "Top 3 Most Common Organizations by Employment Region",
     y = NULL,
@@ -338,9 +345,9 @@ top_3_orgs_by_reg_region <- data %>%
 })
 
 # Visualize the top 3 organizations by employment region and another variable
-top_3_orgs_by_reg_region_plot <- ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registration_count, fill = standardized_name)) +
+top_3_orgs_by_reg_region_plot <- ggplot(top_3_orgs_by_reg_region, aes(x = reorder_within(standardized_name, total_registration_count, employment_region), y = total_registration_count, fill = standardized_name)) +
   geom_bar(stat = "identity", position = "dodge", color = "black") +  
-  facet_grid(~ employment_region) +  
+  facet_grid(~ employment_region, scales = "free_x") +  
   labs(
     title = "Top 3 Orgs by Registrations across Employment Regions",
     fill = "Organization" ,
@@ -402,7 +409,14 @@ top_firm_state_data <- data %>%
     .groups = "drop"
   )
 
-# 2. Aggregate data by region and firm
+# 2.a Reorder factor levels based on individual_count
+top_firm_state_data <- top_firm_state_data %>%
+  group_by(standardized_name) %>%
+  mutate(total_individuals = sum(individual_count, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(standardized_name = forcats::fct_reorder(standardized_name, total_individuals, .desc = TRUE))
+
+# 3. Aggregate data by region and firm
 top_firm_region_data <- data %>%
   filter(standardized_name %in% top_10_firms) %>%
   group_by(standardized_name, employment_region) %>%
@@ -533,7 +547,7 @@ for (name in names(ggplot_list)) {
 #Save Ploty interactive
 htmlwidgets::saveWidget(
   top_5_firms_map, 
-  file = "plots/top_5_firms_map.html", 
+  file = "docs/index.html", 
   selfcontained = TRUE
 )
 

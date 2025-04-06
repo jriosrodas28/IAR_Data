@@ -394,7 +394,10 @@ library(plotly)</code></pre>
 <pre><code>## The following object is masked from &#39;package:graphics&#39;:
 ## 
 ##     layout</code></pre>
-<pre class="r"><code>library(RColorBrewer)</code></pre>
+<pre class="r"><code>library(RColorBrewer)
+library(tidytext)</code></pre>
+<pre><code>## Warning: package &#39;tidytext&#39; was built under R version 4.4.3</code></pre>
+<pre class="r"><code>library(forcats)</code></pre>
 <pre class="r"><code>#load data
 data &lt;- read.csv(&quot;df_final.csv&quot;)</code></pre>
 <div id="part-1-standardize-employment-organization-names-and-clean-data" class="section level2">
@@ -637,10 +640,15 @@ top_3_by_region &lt;- data %&gt;%
   group_by(employment_region) %&gt;%  
   slice_head(n = 3)
 
+# Reorder factor levels by frequency for legend + bar alignment
+top_3_by_region &lt;- top_3_by_region %&gt;%
+  group_by(employment_region) %&gt;%
+  mutate(standardized_name = fct_reorder2(standardized_name, name_count, employment_region, .fun = max, .desc = TRUE)) %&gt;%
+  ungroup()
 
-top_3_by_region_plot &lt;- ggplot(top_3_by_region, aes(x = standardized_name, y = name_count, fill = standardized_name)) +
+top_3_by_region_plot &lt;- ggplot(top_3_by_region, aes(x = reorder_within(standardized_name, name_count, employment_region),  y = name_count, fill = standardized_name)) +
   geom_bar(stat = &quot;identity&quot;, position=&quot;dodge&quot;, color=&quot;black&quot;) +
-  facet_grid(~ employment_region) +  
+  facet_grid(~ employment_region, scales = &quot;free_x&quot;) +  
   labs(
     title = &quot;Top 3 Most Common Organizations by Employment Region&quot;,
     y = NULL,
@@ -686,9 +694,9 @@ top_3_orgs_by_reg_region &lt;- data %&gt;%
 })
 
 # Visualize the top 3 organizations by employment region and another variable
-top_3_orgs_by_reg_region_plot &lt;- ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registration_count, fill = standardized_name)) +
+top_3_orgs_by_reg_region_plot &lt;- ggplot(top_3_orgs_by_reg_region, aes(x = reorder_within(standardized_name, total_registration_count, employment_region), y = total_registration_count, fill = standardized_name)) +
   geom_bar(stat = &quot;identity&quot;, position = &quot;dodge&quot;, color = &quot;black&quot;) +  
-  facet_grid(~ employment_region) +  
+  facet_grid(~ employment_region, scales = &quot;free_x&quot;) +  
   labs(
     title = &quot;Top 3 Orgs by Registrations across Employment Regions&quot;,
     fill = &quot;Organization&quot; ,
@@ -741,7 +749,14 @@ top_firm_state_data &lt;- data %&gt;%
     .groups = &quot;drop&quot;
   )
 
-# 2. Aggregate data by region and firm
+# 2.a Reorder factor levels based on individual_count
+top_firm_state_data &lt;- top_firm_state_data %&gt;%
+  group_by(standardized_name) %&gt;%
+  mutate(total_individuals = sum(individual_count, na.rm = TRUE)) %&gt;%
+  ungroup() %&gt;%
+  mutate(standardized_name = forcats::fct_reorder(standardized_name, total_individuals, .desc = TRUE))
+
+# 3. Aggregate data by region and firm
 top_firm_region_data &lt;- data %&gt;%
   filter(standardized_name %in% top_10_firms) %&gt;%
   group_by(standardized_name, employment_region) %&gt;%
@@ -863,7 +878,7 @@ for (name in names(ggplot_list)) {
 #Save Ploty interactive
 htmlwidgets::saveWidget(
   top_5_firms_map, 
-  file = &quot;plots/top_5_firms_map.html&quot;, 
+  file = &quot;docs/index.html&quot;, 
   selfcontained = TRUE
 )</code></pre>
 </div>
