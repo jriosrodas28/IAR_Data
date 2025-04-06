@@ -486,8 +486,7 @@ top_5_firms_map <- plot_ly(
     "State: ", employment_state, "<br>",
     "Individuals: ", individual_count, "<br>",
     "Registrations: ", total_registration_count, "<br>",
-    "Average Registration Duration (months): ", ave_registration_duration, "<br>",
-    "Total Registered Cities: ", total_reg_city_count
+    "Average Registration Duration (months): ", ave_registration_duration, "<br>"
   ),
   marker = list(
     size = 8,
