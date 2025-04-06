@@ -232,6 +232,8 @@ top_10_orgs_plot <- ggplot(top_10_orgs, aes(x = reorder(standardized_name, n), y
   coord_flip() +
   scale_y_continuous(expand = c(0, 1), limits = c(0, NA))  
 
+summary(top_10_orgs)
+
 ```
 
 ```{r}
@@ -275,6 +277,7 @@ box_plot <- ggplot(data, aes(y = ave_registration_duration_years)) +
 # Arrange the plots using cowplot
 Average_registration_duration_plot <- plot_grid(hist_plot, box_plot, ncol = 1, rel_heights = c(0.9, 0.15), align = 'v', axis = 'lr')
 ```
+
 ```{r}
 # Group by state and find the top 3 most common standardized names
 top_3_by_region <- data %>%
@@ -292,25 +295,24 @@ top_3_by_region <- top_3_by_region %>%
   mutate(standardized_name = fct_reorder2(standardized_name, name_count, employment_region, .fun = max, .desc = TRUE)) %>%
   ungroup()
 
-top_3_by_region_plot <- ggplot(top_3_by_region, aes(x = reorder_within(standardized_name, name_count, employment_region),  y = name_count, fill = standardized_name)) +
-  geom_bar(stat = "identity", position="dodge", color="black") +
-  facet_grid(~ employment_region, scales = "free_x") +  
-  labs(
-    title = "Top 3 Most Common Organizations by Employment Region",
-    y = NULL,
-    fill = "Organization"  
-  ) +
-  scale_fill_brewer(palette = "Set1") +  
-  scale_y_continuous(expand = c(0, 0)) +
-  theme_classic() +
-  theme(
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    axis.title.x = element_blank()
+# Now we can generate a summary for each region:
+region_summary <- top_3_by_region %>%
+  group_by(employment_region) %>%
+  summarise(
+    total_count = sum(name_count),
+    min_count = min(name_count),
+    max_count = max(name_count),
+    median_count = median(name_count),
+    mean_count = mean(name_count),
+    .groups = 'drop'
   )
 
+# Select specific columns (employment_region, median_count, mean_count)
+region_summary_selected <- region_summary %>%
+  select(employment_region, median_count, mean_count)
 
-
+# Display the selected columns
+region_summary_selected
 ```
 ```{r}
 suppressMessages({
@@ -427,6 +429,8 @@ top_firm_region_data <- data %>%
     total_reg_city_count = sum(reg_city_count),
     .groups = "drop"
   )
+
+summary(top_firm_region_data)
 ```
 
 ```{r}
