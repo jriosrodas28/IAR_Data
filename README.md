@@ -104,7 +104,7 @@ The dataset was explored through both static and interactive visualizations, foc
 ### 3. **Regional Patterns**
    Regional trends were analyzed by visualizing the top 3 firms by employment region and registration volume across U.S. states.
 
-### 4. **Individual Comparison**
+### 4. **Firm Comparison**
    A scatter plot showing the relationship between registration count and average registration duration across firms.
 
 ### 5. **Interactive Map**
