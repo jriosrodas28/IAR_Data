@@ -550,7 +550,7 @@ for (name in names(ggplot_list)) {
 #Save Ploty interactive
 htmlwidgets::saveWidget(
   top_5_firms_map, 
-  file = "docs/index.html", 
+  file = "plots/top_5_firms_map.html", 
   selfcontained = TRUE
 )
 
