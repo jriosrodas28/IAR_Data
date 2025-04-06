@@ -438,7 +438,7 @@ set.seed(42)  # For reproducibility of jitter
 state_coords <- data.frame(
   employment_state = state.abb,
   lat = state.center$y,
-  lon = state.center$x,
+  lon = (state.center$x - .5),
   stringsAsFactors = FALSE
 )
 
@@ -446,8 +446,8 @@ state_coords <- data.frame(
 top_firm_state_data <- top_firm_state_data %>%
   left_join(state_coords, by = "employment_state") %>%
   mutate(
-    lat_jitter = lat + runif(n(), -0.6, 0.6),
-    lon_jitter = lon + runif(n(), -0.6, 0.6)
+    lat_jitter = lat + runif(n(), -0.3, 0.3),
+    lon_jitter = lon + runif(n(), -0.0, 0.0)
   )
 
 top_firm_state_data <- top_firm_state_data %>%
@@ -455,12 +455,12 @@ top_firm_state_data <- top_firm_state_data %>%
     lat_jitter = case_when(
       employment_state == "HI" ~ 20.5 + runif(n(), -0.4, 0.4),
       employment_state == "AK" ~ 65   + runif(n(), -0.9, 0.9),
-      TRUE ~ lat + runif(n(), -0.6, 0.6)
+      TRUE ~ lat + runif(n(), -0.3, 0.3)
     ),
     lon_jitter = case_when(
       employment_state == "HI" ~ -156.5 + runif(n(), -0.4, 0.4),
       employment_state == "AK" ~ -152   + runif(n(), -0.9, 0.9),
-      TRUE ~ lon + runif(n(), -0.6, 0.6)
+      TRUE ~ lon + runif(n(), -0.0, 0.0)
     )
   )
 
@@ -486,7 +486,7 @@ top_5_firms_map <- plot_ly(
     "Total Registered Cities: ", total_reg_city_count
   ),
   marker = list(
-    size = ~sqrt(individual_count),
+    size = 8,
     sizemode = "area",
     line = list(width = 0.5, color = "black"),
     opacity = 0.7
@@ -514,7 +514,7 @@ top_5_firms_map <- top_5_firms_map %>% layout(
   )
 )
 
-
+top_5_firms_map
 ```
 
 ## Save Plots
@@ -547,7 +547,7 @@ for (name in names(ggplot_list)) {
 #Save Ploty interactive
 htmlwidgets::saveWidget(
   top_5_firms_map, 
-  file = "docs/index.html", 
+  file = "plots/top_5_firms_map.html", 
   selfcontained = TRUE
 )
 
