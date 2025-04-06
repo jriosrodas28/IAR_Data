@@ -218,7 +218,7 @@ top_10_orgs <- data %>%
   arrange(desc(n)) %>%
   top_n(10, n)
 
-ggplot(top_10_orgs, aes(x = reorder(standardized_name, n), y = n)) +
+top_10_orgs_plot <- ggplot(top_10_orgs, aes(x = reorder(standardized_name, n), y = n)) +
   geom_col(fill = 'lightblue', color = "black") +
   labs(
     title = "Top 10 Most Common Organizations",
@@ -231,6 +231,7 @@ ggplot(top_10_orgs, aes(x = reorder(standardized_name, n), y = n)) +
   scale_y_continuous(expand = c(0, 1), limits = c(0, NA))  
 
 ```
+
 ```{r}
 # Custom theme to remove y-axis elements for boxplot
 mytheme <- theme(
@@ -270,7 +271,7 @@ box_plot <- ggplot(data, aes(y = ave_registration_duration_years)) +
   )
 
 # Arrange the plots using cowplot
-plot_grid(hist_plot, box_plot, ncol = 1, rel_heights = c(0.9, 0.15), align = 'v', axis = 'lr')
+Average_registration_duration_plot <- plot_grid(hist_plot, box_plot, ncol = 1, rel_heights = c(0.9, 0.15), align = 'v', axis = 'lr')
 ```
 ```{r}
 # Group by state and find the top 3 most common standardized names
@@ -284,7 +285,7 @@ top_3_by_region <- data %>%
   slice_head(n = 3)
 
 
-ggplot(top_3_by_region, aes(x = standardized_name, y = name_count, fill = standardized_name)) +
+top_3_by_region_plot <- ggplot(top_3_by_region, aes(x = standardized_name, y = name_count, fill = standardized_name)) +
   geom_bar(stat = "identity", position="dodge", color="black") +
   facet_grid(~ employment_region) +  
   labs(
@@ -314,7 +315,7 @@ top_10_orgs_by_reg <- data %>%
   slice_head(n = 10)  
 })
 
-ggplot(top_10_orgs_by_reg, aes(x = standardized_name, y = total_registration_count)) +
+top_10_orgs_by_reg_plot <- ggplot(top_10_orgs_by_reg, aes(x = reorder(standardized_name, total_registration_count), y = total_registration_count)) +
   geom_bar(stat = "identity", position = "stack", color = "black", fill = "lightblue") +
   labs(
     title = "Top 10 Org by Registration",
@@ -337,7 +338,7 @@ top_3_orgs_by_reg_region <- data %>%
 })
 
 # Visualize the top 3 organizations by employment region and another variable
-ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registration_count, fill = standardized_name)) +
+top_3_orgs_by_reg_region_plot <- ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registration_count, fill = standardized_name)) +
   geom_bar(stat = "identity", position = "dodge", color = "black") +  
   facet_grid(~ employment_region) +  
   labs(
@@ -361,7 +362,7 @@ ggplot(top_3_orgs_by_reg_region, aes(x = standardized_name, y = total_registrati
 ```{r}
 
 # Create a scatter plot to visualize registration_count vs ave_registration_duration
-ggplot(data, aes(y = registration_count, x = ave_registration_duration)) +
+reg_count_vs_duration_plot <- ggplot(data, aes(y = registration_count, x = ave_registration_duration)) +
   geom_jitter(color = "lightblue", alpha = 0.5) +  
   labs(
     title = "Registration Count vs Average Registration Duration",
@@ -438,14 +439,14 @@ top_firm_state_data <- top_firm_state_data %>%
 top_firm_state_data <- top_firm_state_data %>%
   mutate(
     lat_jitter = case_when(
-      employment_state == "HI" ~ 20.5,
-      employment_state == "AK" ~ 63,
-      TRUE ~ lat_jitter
+      employment_state == "HI" ~ 20.5 + runif(n(), -0.4, 0.4),
+      employment_state == "AK" ~ 65   + runif(n(), -0.9, 0.9),
+      TRUE ~ lat + runif(n(), -0.6, 0.6)
     ),
     lon_jitter = case_when(
-      employment_state == "HI" ~ -157.5,
-      employment_state == "AK" ~ -150,
-      TRUE ~ lon_jitter
+      employment_state == "HI" ~ -156.5 + runif(n(), -0.4, 0.4),
+      employment_state == "AK" ~ -152   + runif(n(), -0.9, 0.9),
+      TRUE ~ lon + runif(n(), -0.6, 0.6)
     )
   )
 
@@ -453,7 +454,7 @@ top_firm_state_data <- top_firm_state_data %>%
 # 5. Plot
 color_palette <- brewer.pal(5, "Set1")
 
-plot_ly(
+top_5_firms_map <- plot_ly(
   data = top_firm_state_data,
   type = "scattergeo",
   mode = "markers",
@@ -467,8 +468,8 @@ plot_ly(
     "State: ", employment_state, "<br>",
     "Individuals: ", individual_count, "<br>",
     "Registrations: ", total_registration_count, "<br>",
-    "Registration average duration in months: ", ave_registration_duration, "<br>",
-    "Registered in num Cities: ", total_reg_city_count
+    "Average Registration Duration (months): ", ave_registration_duration, "<br>",
+    "Total Registered Cities: ", total_reg_city_count
   ),
   marker = list(
     size = ~sqrt(individual_count),
@@ -479,7 +480,7 @@ plot_ly(
   hoverinfo = "text"
 ) %>%
   layout(
-    title = "Top 5 Firms by IAR Employment",
+    font = list(size= 18),
     geo = list(
       scope = "usa",
       showland = TRUE,
@@ -488,8 +489,57 @@ plot_ly(
     )
   )
 
+
+top_5_firms_map <- top_5_firms_map %>% layout(
+  title = list(
+    text = "Top 5 Firms by IAR Employment",
+    x = 0.5,          
+    y = 0.95,          
+    xanchor = 'center', 
+    yanchor = 'top'   
+  )
+)
+
+
 ```
 
+## Save Plots
+```{r}
+# Named list of ggplot objects
+ggplot_list <- list(
+  "Average_reg_duration" = Average_registration_duration_plot,
+  "top_10_common_orgs" = top_10_orgs_plot,
+  "top_3_common_by_region" = top_3_by_region_plot,
+  "top_10_orgs_by_reg" = top_10_orgs_by_reg_plot,
+  "top_3_orgs_by_reg_region" = top_3_orgs_by_reg_region_plot,
+  "reg_count_vs_duration" = reg_count_vs_duration_plot
+)
+
+# Save as .jpg
+if (!dir.exists("plots")) dir.create("plots")
+
+for (name in names(ggplot_list)) {
+  ggsave(
+    filename = paste0("plots/", name, ".jpg"),
+    plot = ggplot_list[[name]],
+    device = "jpeg",
+    width = 8,
+    height = 5,
+    dpi = 300
+  )
+}
+
+
+#Save Ploty interactive
+htmlwidgets::saveWidget(
+  top_5_firms_map, 
+  file = "plots/top_5_firms_map.html", 
+  selfcontained = TRUE
+)
+
+
+
+```
 
 
 
